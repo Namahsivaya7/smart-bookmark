@@ -139,8 +139,12 @@ export default function Home() {
 
   const loginWithGoogle = async () => {
     await supabase.auth.signInWithOAuth({
-      provider: "google",
-    });
+  provider: 'google',
+  options: {
+    redirectTo: 'https://smart-bookmark-eight-alpha.vercel.app/auth/callback',
+  },
+})
+
   };
 
   if (loading) {
