@@ -1,74 +1,42 @@
-// "use client";
-
-// import { useState } from "react";
-// import { supabase } from "../lib/supabaseClient";
-
-// export default function BookmarkForm({ refresh }: any) {
-//   const [title, setTitle] = useState("");
-//   const [url, setUrl] = useState("");
-
-//   const addBookmark = async () => {
-//     if (!title || !url) return;
-
-//     const user = (await supabase.auth.getUser()).data.user;
-
-//     await supabase.from("bookmarks").insert([
-//       {
-//         title,
-//         url,
-//         user_id: user?.id,
-//       },
-//     ]);
-
-//     setTitle("");
-//     setUrl("");
-//     refresh();
-//   };
-
-//   return (
-//     <div className="bg-white p-4 rounded shadow mb-4">
-//       <input
-//         className="border p-2 w-full mb-2"
-//         placeholder="Title"
-//         value={title}
-//         onChange={(e) => setTitle(e.target.value)}
-//       />
-//       <input
-//         className="border p-2 w-full mb-2"
-//         placeholder="URL"
-//         value={url}
-//         onChange={(e) => setUrl(e.target.value)}
-//       />
-//       <button
-//         onClick={addBookmark}
-//         className="bg-green-600 text-white px-4 py-2 rounded"
-//       >
-//         Add Bookmark
-//       </button>
-//     </div>
-//   );
-// }
-
-
-
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { motion, AnimatePresence } from "framer-motion";
 
-export default function BookmarkForm({ refresh }: any) {
+
+type BookmarkFormProps = {
+  refresh: () => Promise<void>
+
+}
+
+
+export default function BookmarkForm({ refresh }: BookmarkFormProps) {
   const [title, setTitle] = useState("");
   const [url, setUrl] = useState("");
   const [isFocused, setIsFocused] = useState<string | null>(null);
   const [isHovered, setIsHovered] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
-  const [charCount, setCharCount] = useState({ title: 0, url: 0 });
+  // const [charCount, setCharCount] = useState({ title: 0, url: 0 });
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
 
-  useEffect(() => {
-    setCharCount({ title: title.length, url: url.length });
-  }, [title, url]);
+
+const [particles] = useState(() =>
+  Array.from({ length: 10 }).map(() => ({
+    x: `${Math.random() * 100}%`,
+    y: `${Math.random() * 100}%`,
+  }))
+)
+
+
+  // useEffect(() => {
+  //   setCharCount({ title: title.length, url: url.length });
+  // }, [title, url]);
+
+  const charCount = {
+  title: title.length,
+  url: url.length,
+};
 
   const addBookmark = async () => {
     if (!title || !url) return;
@@ -151,13 +119,13 @@ export default function BookmarkForm({ refresh }: any) {
 
         {/* Floating Particles */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          {[...Array(6)].map((_, i) => (
+          {particles.map((particle, i) => (
             <motion.div
               key={i}
               className="absolute w-1 h-1 bg-purple-400/30 rounded-full"
               initial={{
-                x: Math.random() * 100 + "%",
-                y: Math.random() * 100 + "%",
+                x: particle.x,
+                y: particle.y,
               }}
               animate={{
                 y: [null, "-30%"],
