@@ -1,3 +1,5 @@
+export const revalidate = 0;
+
 "use client";
 
 import { useEffect, useState, useRef } from "react";
