@@ -92,8 +92,14 @@ export default function Dashboard() {
       )
       .subscribe();
 
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") fetchBookmarks();
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
     return () => {
       supabase.removeChannel(channel);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, []);
 
