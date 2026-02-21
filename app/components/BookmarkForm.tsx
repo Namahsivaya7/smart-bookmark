@@ -38,25 +38,36 @@ const [particles] = useState(() =>
   url: url.length,
 };
 
-  const addBookmark = async () => {
-    if (!title || !url) return;
+const addBookmark = async () => {
+  if (!title || !url) return;
 
-    const user = (await supabase.auth.getUser()).data.user;
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
 
-    await supabase.from("bookmarks").insert([
-      {
-        title,
-        url,
-        user_id: user?.id,
-      },
-    ]);
+  const { error } = await supabase
+    .from("bookmarks")
+    .insert({
+      title,
+      url,
+      user_id: user.id,
+    })
+    .select()       // 🔥 VERY IMPORTANT
+    .single();      // 🔥 VERY IMPORTANT
 
-    setTitle("");
-    setUrl("");
-    setShowSuccess(true);
-    setTimeout(() => setShowSuccess(false), 2000);
-    refresh();
-  };
+  if (error) {
+    console.error("Insert error:", error);
+    return;
+  }
+
+  setTitle("");
+  setUrl("");
+  setShowSuccess(true);
+  setTimeout(() => setShowSuccess(false), 2000);
+
+  // ❌ REMOVE THESE:
+  // refresh();
+  // broadcastBookmarksChange();
+};
 
   const handleMouseMove = (e: React.MouseEvent) => {
     const rect = e.currentTarget.getBoundingClientRect();

@@ -19,6 +19,7 @@ export default function Dashboard() {
   });
   const router = useRouter();
   const containerRef = useRef<HTMLDivElement>(null);
+  const fetchBookmarksRef = useRef<( () => Promise<void> ) | null>(null);
 
   useEffect(() => {
     const checkUser = async () => {
@@ -47,59 +48,60 @@ export default function Dashboard() {
     return () => window.removeEventListener("mousemove", handleMouseMove);
   }, [router]);
 
+  const updateStats = (list: { created_at?: string; category?: string }[]) => {
+    const now = new Date();
+    const weekAgo = new Date(now);
+    weekAgo.setDate(weekAgo.getDate() - 7);
+    setStats({
+      total: list.length,
+      recent: list.filter(b => new Date(b.created_at || 0) > weekAgo).length,
+      categories: new Set(list.map(b => b.category || "Uncategorized")).size
+    });
+  };
+
   const fetchBookmarks = async () => {
     const { data } = await supabase
       .from("bookmarks")
       .select("*")
       .order("created_at", { ascending: false });
 
-    setBookmarks(data || []);
-    
-    // Calculate stats
-    if (data) {
-      const now = new Date();
-      const weekAgo = new Date(now.setDate(now.getDate() - 7));
-      
-      setStats({
-        total: data.length,
-        recent: data.filter(b => new Date(b.created_at) > weekAgo).length,
-        categories: new Set(data.map(b => b.category || 'Uncategorized')).size
-      });
-    }
-    
+    const list = data || [];
+    setBookmarks(list);
+    updateStats(list);
     setLoading(false);
   };
+  fetchBookmarksRef.current = fetchBookmarks;
 
   useEffect(() => {
-    const getBookmarks = async () => {
-      await fetchBookmarks();
+    let channel: any;
+  
+    const setupRealtime = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+  
+      fetchBookmarks();
+  
+      channel = supabase
+        .channel("realtime-bookmarks")
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "bookmarks",
+          },
+          (payload) => {
+            console.log("Realtime event:", payload);
+            fetchBookmarks();
+          }
+        )
+        .subscribe();
     };
-
-    getBookmarks();
-
-    const channel = supabase
-      .channel("bookmarks-channel")
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "bookmarks",
-        },
-        () => {
-          getBookmarks();
-        }
-      )
-      .subscribe();
-
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === "visible") fetchBookmarks();
-    };
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-
+  
+    setupRealtime();
+  
     return () => {
-      supabase.removeChannel(channel);
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      if (channel) supabase.removeChannel(channel);
     };
   }, []);
 
@@ -295,7 +297,7 @@ export default function Dashboard() {
             </div>
             <AnimatePresence mode="wait">
               <BookmarkList 
-                key={bookmarks.length} 
+                // key={bookmarks.length} 
                 bookmarks={bookmarks} 
                 refresh={fetchBookmarks} 
               />
